@@ -33,8 +33,8 @@ echo "✓ pg_hba.conf configurado"
 
 # Crear directorio para WAL archive
 mkdir -p /backups/wal_archive
-chmod 700 /backups/wal_archive
-chown postgres:postgres /backups/wal_archive
+chmod 700 /backups/wal_archive 2>/dev/null || true
+chown postgres:postgres /backups/wal_archive 2>/dev/null || true
 echo "✓ Directorio WAL archive creado"
 
 echo ""
