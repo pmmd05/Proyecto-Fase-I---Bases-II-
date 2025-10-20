@@ -37,13 +37,20 @@ SELECT
 FROM generate_series(1, 200) AS serie;
 
 -- Insertar 500 ventas con datos realistas
+-- Usa una subconsulta para seleccionar solo producto_id existentes
 INSERT INTO ventas (producto_id, cantidad, total, fecha_venta)
 SELECT 
-    (RANDOM() * (SELECT MAX(id) FROM productos))::INTEGER + 1,
+    p.id,
     (RANDOM() * 10 + 1)::INTEGER,
     (RANDOM() * 500 + 50)::DECIMAL(10,2),
     CURRENT_TIMESTAMP - (RANDOM() * INTERVAL '90 days')
-FROM generate_series(1, 500);
+FROM 
+    generate_series(1, 500) AS serie,
+    LATERAL (
+        SELECT id FROM productos 
+        ORDER BY RANDOM() 
+        LIMIT 1
+    ) AS p;
 
 \echo ''
 \echo '======================================================'
