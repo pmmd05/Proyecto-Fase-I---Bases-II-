@@ -1,0 +1,110 @@
+# ====================================================
+# .gitignore para Proyecto PostgreSQL con Backups
+# ====================================================
+
+# ====================================================
+# BACKUPS - NO SUBIR NUNCA
+# ====================================================
+backups/
+backups/*
+backups/**/*
+*.tar.gz
+*.backup
+*.sql.gz
+*.dump
+
+# ====================================================
+# LOGS SENSIBLES
+# ====================================================
+*.log
+logs/
+*.out
+
+# ====================================================
+# DATOS DE POSTGRESQL (Volúmenes Docker)
+# ====================================================
+data/
+pgdata/
+postgres-data/
+primary-data/
+standby-data/
+replica-data/
+
+# ====================================================
+# ARCHIVOS DE CONFIGURACIÓN CON CONTRASEÑAS
+# ====================================================
+# Si tienes archivos .env con contraseñas, protégelos:
+.env
+.env.local
+.env.production
+*.env.secret
+*_password.txt
+*_credentials.txt
+
+# ====================================================
+# ARCHIVOS TEMPORALES DE DOCKER
+# ====================================================
+.dockerignore
+docker-compose.override.yml
+
+# ====================================================
+# ARCHIVOS DE SISTEMA OPERATIVO
+# ====================================================
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# ====================================================
+# EDITORES E IDEs
+# ====================================================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains (IntelliJ, PyCharm, etc.)
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ====================================================
+# ARCHIVOS DE DOCUMENTACIÓN TEMPORAL
+# ====================================================
+# Si generas PDFs de prueba, no los subas
+*_draft.pdf
+*_borrador.pdf
+*.tmp
+
+# ====================================================
+# NODE_MODULES (si usas herramientas Node.js)
+# ====================================================
+node_modules/
+package-lock.json
+yarn.lock
+
+# ====================================================
+# PYTHON (si usas scripts Python)
+# ====================================================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
