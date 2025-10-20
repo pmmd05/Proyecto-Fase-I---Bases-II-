@@ -10,6 +10,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: pollo_sanjuanero
+      PGPASSWORD: replicator123
     ports:
       - "5432:5432"
     volumes:
@@ -105,6 +106,32 @@ services:
       exec gosu postgres postgres -D /var/lib/postgresql/data/pgdata
       "
 
+  # ========================================
+  # SERVICIO DE BACKUPS AUTOMATIZADOS
+  # ========================================
+  backup-scheduler:
+    image: postgres:15
+    container_name: pg-backup-scheduler
+    hostname: backup-scheduler
+    environment:
+      PGPASSWORD: replicator123
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/docker-entrypoint-initdb.d
+    networks:
+      - postgres-network
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    entrypoint: []
+    command: >
+      bash -c "
+      echo '=== CONFIGURANDO SERVICIO DE BACKUPS ===';
+      apt-get update -qq && apt-get install -y -qq cron;
+      chmod +x /docker-entrypoint-initdb.d/*.sh;
+      bash /docker-entrypoint-initdb.d/setup-cron.sh
+      "
+
 volumes:
   primary-data:
   standby-data:
@@ -112,4 +139,4 @@ volumes:
 
 networks:
   postgres-network:
-    driver: bridge
+    driver: bridge  
