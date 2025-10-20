@@ -1,0 +1,115 @@
+services:
+  # ========================================
+  # NODO 1: PRIMARIO
+  # ========================================
+  postgres-primary:
+    image: postgres:15
+    container_name: pg-primary
+    hostname: postgres-primary
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: pollo_sanjuanero
+    ports:
+      - "5432:5432"
+    volumes:
+      - primary-data:/var/lib/postgresql/data
+      - ./backups:/backups
+      - ./scripts:/docker-entrypoint-initdb.d
+    networks:
+      - postgres-network
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby=on
+      -c archive_mode=on
+      -c archive_command='test ! -f /backups/wal_archive/%f && cp %p /backups/wal_archive/%f'
+      -c listen_addresses='*'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ========================================
+  # NODO 2: STANDBY
+  # ========================================
+  postgres-standby:
+    image: postgres:15
+    container_name: pg-standby
+    hostname: postgres-standby
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - standby-data:/var/lib/postgresql/data
+    networks:
+      - postgres-network
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    entrypoint: []
+    command: >
+      bash -c "
+      echo '=== CONFIGURANDO STANDBY ===';
+      if [ ! -f /var/lib/postgresql/data/pgdata/PG_VERSION ]; then
+        echo 'Esperando al primario...';
+        until pg_isready -h postgres-primary -U postgres -d pollo_sanjuanero; do sleep 2; done;
+        echo 'Creando backup base...';
+        PGPASSWORD=replicator123 pg_basebackup -h postgres-primary -U replicator -D /var/lib/postgresql/data/pgdata -Fp -Xs -P -R;
+        echo 'Configurando replicación...';
+        echo \"primary_conninfo = 'host=postgres-primary port=5432 user=replicator password=replicator123 application_name=standby'\" > /var/lib/postgresql/data/pgdata/postgresql.auto.conf;
+        touch /var/lib/postgresql/data/pgdata/standby.signal;
+        chown -R postgres:postgres /var/lib/postgresql/data/pgdata;
+      fi;
+      echo 'Iniciando servidor standby...';
+      exec gosu postgres postgres -D /var/lib/postgresql/data/pgdata
+      "
+
+  # ========================================
+  # NODO 3: RÉPLICA
+  # ========================================
+  postgres-replica:
+    image: postgres:15
+    container_name: pg-replica
+    hostname: postgres-replica
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5434:5432"
+    volumes:
+      - replica-data:/var/lib/postgresql/data
+    networks:
+      - postgres-network
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    entrypoint: []
+    command: >
+      bash -c "
+      echo '=== CONFIGURANDO RÉPLICA ===';
+      if [ ! -f /var/lib/postgresql/data/pgdata/PG_VERSION ]; then
+        echo 'Esperando al primario...';
+        until pg_isready -h postgres-primary -U postgres -d pollo_sanjuanero; do sleep 2; done;
+        echo 'Creando backup base...';
+        PGPASSWORD=replicator123 pg_basebackup -h postgres-primary -U replicator -D /var/lib/postgresql/data/pgdata -Fp -Xs -P -R;
+        echo 'Configurando replicación...';
+        echo \"primary_conninfo = 'host=postgres-primary port=5432 user=replicator password=replicator123 application_name=replica'\" > /var/lib/postgresql/data/pgdata/postgresql.auto.conf;
+        touch /var/lib/postgresql/data/pgdata/standby.signal;
+        chown -R postgres:postgres /var/lib/postgresql/data/pgdata;
+      fi;
+      echo 'Iniciando servidor replica...';
+      exec gosu postgres postgres -D /var/lib/postgresql/data/pgdata
+      "
+
+volumes:
+  primary-data:
+  standby-data:
+  replica-data:
+
+networks:
+  postgres-network:
+    driver: bridge
